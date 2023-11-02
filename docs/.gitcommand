@@ -1,0 +1,59 @@
+# удаление коммита
+https://ru.stackoverflow.com/questions/431520/%d0%9a%d0%b0%d0%ba-%d0%b2%d0%b5%d1%80%d0%bd%d1%83%d1%82%d1%8c%d1%81%d1%8f-%d0%be%d1%82%d0%ba%d0%b0%d1%82%d0%b8%d1%82%d1%8c%d1%81%d1%8f-%d0%ba-%d0%b1%d0%be%d0%bb%d0%b5%d0%b5-%d1%80%d0%b0%d0%bd%d0%bd%d0%b5%d0%bc%d1%83-%d0%ba%d0%be%d0%bc%d0%bc%d0%b8%d1%82%d1%83
+
+# Инициализация каталога
+git init
+
+# Добавить в гит файл
+git add README.md
+
+# Добавить в гит всё что в текущем каталоге
+git add .
+
+# Коммит - подтверждение изменений.
+git commit -m "Load app to git"
+
+# установить ветку v2
+git branch -M v2
+
+# Методы загрузки на сайт github. remote это origin. методы: https или ssh
+git remote add origin https://github.com/kuromaster/webapp.git
+
+# Выгрузка на ит
+git push -u origin v2
+
+# Удаление из гита файла. ВАЖНО если не указать флаг --cached то удалится из гита и текушего каталога.
+git rm webapp/config/.env --cached
+git commit -M 'remove file .env'
+
+# Управление исключениями - что загружать из каталога на гит, а что не стоит
+vim .gitignore
+
+# Удалить всё с гита
+git rm -r --cached .
+git commit -m "remove all files"
+
+# Удаление текущего метода загрузки и переход на ssh метод
+git remote rm origin
+git remote add origin git@github.com:kuromaster/trade_funding.git
+
+# Если требует авторизации при пуше, то надо выполнить:
+eval $(ssh-agent -s) && ssh-add /root/.ssh/id_rsa
+
+# Изменить ветку
+git checkout -b v2_db_migrate
+git push -u origin v2_db_migrate
+
+# Список веток, с указанием текущей
+git branch
+
+# Откатиться к пердыдущему коммиту с удалением текущего
+git reset --hard HEAD~1
+git push origin HEAD --force
+
+
+# 1547
+
+
+# Remove a git commit which has not been pushed
+git reset HEAD~1
