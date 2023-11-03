@@ -62,7 +62,6 @@ async def main():
         #dp.message.middleware.register(MultipleFileMiddleware())
 
         # Добавляем роуты в диспетчер
-        # dp.include_routers(cm_start.router, registration.router, appointment_menu.router, superuser_menu.router, services.router)
         dp.include_routers(cm_start.router)
         dp.include_routers(registration.router)
         dp.include_routers(services.router)

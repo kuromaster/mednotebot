@@ -1,3 +1,6 @@
+import logging
+import traceback
+
 from aiogram import Router, F
 from aiogram import types
 from aiogram.fsm.context import FSMContext
@@ -7,8 +10,22 @@ from config_reader import myvars, DEBUG
 from keyboards.for_doctor import run_calendar, get_kb_doctor_menu, get_kb_doctor_selected_day
 from libs.db_lib import pg_select_one_column as pg_soc, pg_execute, pg_select
 from libs.dictanotry_lib import to_ru_dayofweek, to_ru_month3
-from libs.google_ss import update_cell
+from libs.google_ss import update_cell, google_get_vars
 from libs.load_vars import update_appointments
+
+
+if DEBUG == 0:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
+        filename="log/doctor_menu.log",
+        filemode="w")
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
+    )
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -54,7 +71,7 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
         # myvars.picked_date = datetime(year=int(year), month=int(month), day=int(day))
         query = f"SELECT id FROM tb_appointments WHERE date(appt_date) = date('{year}-{month}-{day}') and is_closed = 1"
         res = pg_soc(query)
-        status_apt = ''
+        # status_apt = ''
         if len(res) > 0:
             status_apt = 'закрыта'
         else:
@@ -80,73 +97,87 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
 async def doctor_close_appt(callback: types.CallbackQuery, state: FSMContext):
     user_data = await get_user_data(callback, state)
 
-    for hour in user_data['hours']:
-        appt_date = datetime(year=int(user_data['year']), month=int(user_data['month']), day=int(user_data['day']), hour=hour)
+    try:
+        service, sheets, title = await google_get_vars(user_data, callback)
 
-        # Проверка существует ли запись на этот день и время
-        query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp)"
-        res = pg_soc(query)[0]
-        if res:
-            query = f"UPDATE tb_appointments SET is_closed = 1 WHERE appt_date = '{appt_date}'::timestamp"
-            pg_execute(query)
-        else:
-            query = f"INSERT INTO tb_appointments (is_closed, tid, doctor_id, appt_format, appt_date) " + \
-                    f"VALUES (1, {int(user_data['doctor_id'])}, {int(user_data['doctor_id'])}, '{user_data['appt_format']}', '{appt_date}')"
-            pg_execute(query)
+        for hour in user_data['hours']:
+            appt_date = datetime(year=int(user_data['year']), month=int(user_data['month']), day=int(user_data['day']), hour=hour)
 
-        await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
+            # Проверка существует ли запись на этот день и время
+            query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp)"
+            res = pg_soc(query)[0]
+            if res:
+                query = f"UPDATE tb_appointments SET is_closed = 1 WHERE appt_date = '{appt_date}'::timestamp"
+                pg_execute(query)
+            else:
+                query = f"INSERT INTO tb_appointments (is_closed, tid, doctor_id, appt_format, appt_date) " + \
+                        f"VALUES (1, {int(user_data['doctor_id'])}, {int(user_data['doctor_id'])}, '{user_data['appt_format']}', '{appt_date}')"
+                pg_execute(query)
 
-        if DEBUG == 0:
-            await update_cell(myvars.doctors[user_data['doctor']]['spreadsheet_id'], int(hour),
-                              int(user_data['month']), int(user_data['year']),
-                              int(user_data['day']), user_data['appt_format'], callback)
-        else:
-            await update_cell(myvars.doctors['Соболевский В.А.']['spreadsheet_id'], int(hour),
-                              int(user_data['month']), int(user_data['year']),
-                              int(user_data['day']), user_data['appt_format'], callback)
+            await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
 
-    await update_appointments()
-    await callback.message.delete()
-    # await callback.answer('Успешно')
+            if DEBUG == 0:
+                await update_cell(myvars.doctors[user_data['doctor']]['spreadsheet_id'], int(hour),
+                                  int(user_data['month']), int(user_data['year']),
+                                  int(user_data['day']), user_data['appt_format'], service, sheets, title)
+            else:
+                await update_cell(myvars.doctors['Соболевский В.А.']['spreadsheet_id'], int(hour),
+                                  int(user_data['month']), int(user_data['year']),
+                                  int(user_data['day']), user_data['appt_format'], service, sheets, title)
+
+        await update_appointments()
+        await callback.message.delete()
+        # await callback.answer('Успешно')
+
+    except Exception as e:
+        logger.error(f"exception: {e} traceback: {traceback.format_exc()}")
 
 
 @router.callback_query(F.data.startswith("cb_doctor_open_appt_exec"))
 async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
     user_data = await get_user_data(callback, state)
 
-    for hour in user_data['hours']:
-        appt_date = datetime(year=int(user_data['year']), month=int(user_data['month']), day=int(user_data['day']),
-                             hour=hour)
+    try:
 
-        # Проверка существует ли запись на этот день и время от пациента
-        query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid)"
-        res = pg_soc(query)[0]
-        value = None
-        if res:
-            query = "SELECT lastname, name, surname, appt_format FROM tb_customers as cu " \
-                    "LEFT JOIN tb_appointments as ap ON cu.tid = ap.tid " \
-                    f"WHERE (appt_date = '{appt_date}'::timestamp)"
-            rows = pg_select(query)
-            for row in rows:
-                value = f"openedФИО: {row[0]} {row[1]} {row[2]}\n Формат: {row[3]}"
-            query = f"UPDATE tb_appointments SET is_closed = 0 WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid"
-            pg_execute(query)
-        else:
-            value = "opened"
-            query = f"DELETE FROM tb_appointments " \
-                    f"WHERE appt_date = '{appt_date}'::timestamp and is_closed=1"
-            pg_execute(query)
+        service, sheets, title = await google_get_vars(user_data, callback)
 
-        await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
-        if DEBUG == 1:
-            await update_cell(myvars.doctors['Соболевский В.А.']['spreadsheet_id'], int(hour),
-                              int(user_data['month']), int(user_data['year']),
-                              int(user_data['day']), value, callback)
-        else:
-            await update_cell(myvars.doctors[user_data['doctor']]['spreadsheet_id'], int(hour),
-                              int(user_data['month']), int(user_data['year']),
-                              int(user_data['day']), value, callback)
+        for hour in user_data['hours']:
+            appt_date = datetime(year=int(user_data['year']), month=int(user_data['month']), day=int(user_data['day']),
+                                 hour=hour)
 
-    await update_appointments()
-    await callback.message.delete()
-    # await callback.answer('Успешно')
+            # Проверка существует ли запись на этот день и время от пациента
+            query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid)"
+            res = pg_soc(query)[0]
+            value = None
+            if res:
+                query = "SELECT lastname, name, surname, appt_format FROM tb_customers as cu " \
+                        "LEFT JOIN tb_appointments as ap ON cu.tid = ap.tid " \
+                        f"WHERE (appt_date = '{appt_date}'::timestamp)"
+                rows = pg_select(query)
+                for row in rows:
+                    value = f"openedФИО: {row[0]} {row[1]} {row[2]}\n Формат: {row[3]}"
+                query = f"UPDATE tb_appointments SET is_closed = 0 WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid"
+                pg_execute(query)
+            else:
+                value = "opened"
+                query = f"DELETE FROM tb_appointments " \
+                        f"WHERE appt_date = '{appt_date}'::timestamp and is_closed=1"
+                pg_execute(query)
+
+            await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
+            if DEBUG == 1:
+                await update_cell(myvars.doctors['Соболевский В.А.']['spreadsheet_id'], int(hour),
+                                  int(user_data['month']), int(user_data['year']),
+                                  int(user_data['day']),
+                                  value, service, sheets, title)
+            else:
+                await update_cell(myvars.doctors[user_data['doctor']]['spreadsheet_id'], int(hour),
+                                  int(user_data['month']), int(user_data['year']),
+                                  int(user_data['day']), value, service, sheets, title)
+
+        await update_appointments()
+        await callback.message.delete()
+        # await callback.answer('Успешно')
+
+    except Exception as e:
+        logger.error(f"exception: {e} traceback: {traceback.format_exc()}")

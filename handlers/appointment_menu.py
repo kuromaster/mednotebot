@@ -14,7 +14,7 @@ from libs.load_vars import update_appointments
 from libs.notify import notify_on_appt
 from libs.db_lib import pg_select, pg_execute, pg_select_one_column as pg_soc
 from config_reader import config, myvars
-from libs.google_ss import update_cell
+from libs.google_ss import update_cell, google_get_vars
 
 router = Router()
 
@@ -224,8 +224,9 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
             pg_execute(query)
             # print(f'query: {query}')
             # print(f'month: {month}')
+            service, sheets, title = await google_get_vars(user_data, callback)
             await update_cell(myvars.doctors[doctor]['spreadsheet_id'], int(hour), int(month), int(year), int(day),
-                              value, callback)
+                              value, service, sheets, title)
             await update_appointments()
 
             await notify_on_appt(
@@ -327,13 +328,14 @@ async def appt_close_approve(callback: types.CallbackQuery, state: FSMContext):
     pg_execute(query)
 
     value = "appt_cancel"
+    service, sheets, title = await google_get_vars(user_data, callback)
     await update_cell(user_data['spreadsheet_id'],
                       int(user_data['hour']),
                       int(user_data['month']),
                       int(user_data['year']),
                       int(user_data['day']),
                       value,
-                      callback)
+                      service, sheets, title)
 
     await update_appointments()
     await callback.message.delete()

@@ -8,6 +8,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from aiogram import types
 
+from config_reader import myvars, DEBUG
 from libs.dictanotry_lib import to_ru_month, to_ru_month2, column_by_id, to_ru_dayofweek
 
 
@@ -708,21 +709,41 @@ def get_row_time_id(hour: str, row_id: int):
         return row_id+9
 
 
-async def update_cell(spreadsheet_id, hour, month, year, day, value, callback):
+async def google_get_vars(user_data: dict, callback: types.CallbackQuery):
     credentials = await get_or_create_credentials(SCOPES, callback)
+    title = f"{to_ru_month[calendar.month_name[int(user_data['month'])]].lower()}{int(user_data['year'])}"
+    service = build('sheets', 'v4', credentials=credentials)
+
+    if DEBUG == 1:
+        await create_next_month_calendar_bot(
+            callback, myvars.doctors['Соболевский В.А.']['spreadsheet_id'],
+            service,
+            year=int(user_data['year']),
+            month=int(user_data['month']),
+            title=title)
+    else:
+        await create_next_month_calendar_bot(
+            callback, myvars.doctors[user_data['doctor']]['spreadsheet_id'],
+            service,
+            year=int(user_data['year']),
+            month=int(user_data['month']),
+            title=title)
+
+    sheets = service.spreadsheets()
+    return service, sheets, title
+
+
+async def update_cell(spreadsheet_id, hour, month, year, day, value, service, sheets, title):
+
     # print(f'month: {month}')
     # print(f'month_en: {calendar.month_name[month]}')
     # print(f'month_ru: {to_ru_month[calendar.month_name[month]].lower()}')
-    title = f'{to_ru_month[calendar.month_name[month]].lower()}{year}'
+
     # print(f'title: {title}')
     # print(f'spreadsheet_id: {spreadsheet_id}')
 
     try:
         # spreadsheet_id = SPREADSHEET_ID
-        service = build('sheets', 'v4', credentials=credentials)
-        await create_next_month_calendar_bot(callback, spreadsheet_id, service, year, month, title)
-
-        sheets = service.spreadsheets()
 
         column_name = f'{day} {to_ru_month2[calendar.month_name[month]]} {year}г.'
         row_id, column_id = get_id_by_value(service, title, spreadsheet_id, column_name)
