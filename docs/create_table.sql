@@ -17,9 +17,11 @@ CREATE TABLE IF NOT EXISTS tb_customers (
 );
 
 CREATE TABLE IF NOT EXISTS tb_files (
-    id       SERIAL PRIMARY KEY,
-    tid      INTEGER     NOT NULL,
-    filename VARCHAR(30) NOT NULL
+    id          SERIAL PRIMARY KEY,
+    tid         INTEGER     NOT NULL,
+    filename    VARCHAR(30) NOT NULL,
+    file_type   VARCHAR(15) NOT NULL,
+    created     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS tb_appointments (
@@ -42,5 +44,6 @@ CREATE TABLE IF NOT EXISTS tb_test (
 );
 
 ALTER TABLE tb_appointments ADD CONSTRAINT fk_tb_appointments_tid FOREIGN KEY (tid) REFERENCES tb_customers (tid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_tid FOREIGN KEY (tid) REFERENCES tb_customers (tid) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE tb_appointments OWNER TO dbuser;

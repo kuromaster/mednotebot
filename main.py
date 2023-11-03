@@ -50,6 +50,8 @@ async def main():
 
         # Регистрация scheduler middleware в диспетчере
         dp.update.middleware.register(SchedulerMiddleware(scheduler))
+
+        # Регистрация Фото/Файлы мидлваре
         dp.message.middleware.register(MultipleFileMiddleware())
 
         # Добавляем роуты в диспетчер

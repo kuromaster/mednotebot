@@ -6,7 +6,7 @@ from config_reader import config
 def conn_db():
     conn = pg.connect(database=config.pg_dbname,
                       user=config.pg_user,
-                      password=config.pg_pwd,
+                      password=config.pg_pwd.get_secret_value(),
                       host=config.pg_host,
                       port=5432)
     conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)

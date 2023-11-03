@@ -300,7 +300,7 @@ host    replication     all             ::1/128                 scram-sha-256
 
 root@template:~# sudo su - postgres
 postgres@template:~$ createuser dbuser
-postgres@template:~$ createdb mednotep
+postgres@template:~$ createdb mednote
 
 
 postgres@template:~$ psql
