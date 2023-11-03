@@ -94,7 +94,7 @@ async def doctor_close_appt(callback: types.CallbackQuery, state: FSMContext):
                     f"VALUES (1, {int(user_data['doctor_id'])}, {int(user_data['doctor_id'])}, '{user_data['appt_format']}', '{appt_date}')"
             pg_execute(query)
 
-        await callback.answer('БД обновлена. Обновляется Google таблица')
+        await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
 
         if DEBUG == 0:
             await update_cell(myvars.doctors[user_data['doctor']]['spreadsheet_id'], int(hour),
@@ -137,7 +137,7 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
                     f"WHERE appt_date = '{appt_date}'::timestamp and is_closed=1"
             pg_execute(query)
 
-        await callback.answer('БД обновлена. Обновляется Google таблица')
+        await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
         if DEBUG == 1:
             await update_cell(myvars.doctors['Соболевский В.А.']['spreadsheet_id'], int(hour),
                               int(user_data['month']), int(user_data['year']),
@@ -147,6 +147,6 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
                               int(user_data['month']), int(user_data['year']),
                               int(user_data['day']), value, callback)
 
-    await update_appointments()
     await callback.message.delete()
     await callback.answer('Успешно')
+    await update_appointments()
