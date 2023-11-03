@@ -52,7 +52,7 @@ async def main():
         dp.update.middleware.register(SchedulerMiddleware(scheduler))
 
         # Регистрация Фото/Файлы мидлваре
-        dp.message.middleware.register(MultipleFileMiddleware())
+        #dp.message.middleware.register(MultipleFileMiddleware())
 
         # Добавляем роуты в диспетчер
         # dp.include_routers(cm_start.router, registration.router, appointment_menu.router, superuser_menu.router, services.router)
