@@ -1,3 +1,5 @@
+#! /opt/mednotebot/venv/bin/python3
+
 import asyncio
 import logging
 import traceback

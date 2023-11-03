@@ -1,9 +1,9 @@
 # 0. Check exute file first string:
-(venv) root@dcsrv03:/opt/tmbot# which python3
-/opt/tmbot/venv/bin/python3
+(venv) root@dcsrv03:/opt/mednotebot# which python3
+/opt/mednotebot/venv/bin/python3
 
-vim /opt/tmbot/main.py
-#! /opt/tmbot/venv/bin/python3
+vim /opt/mednotebot/main.py
+#! /opt/mednotebot/venv/bin/python3
 
 # 1. link to /usr/bin
 ln -s /opt/mednotebot/main.py /usr/bin/mednotebot

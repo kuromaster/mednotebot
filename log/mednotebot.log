@@ -1,5 +1,8 @@
-2023-10-26 10:13:28,611 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(524) - Start polling
-2023-10-26 10:13:28,682 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(340) - Run polling for bot @NoteMedBot id=6645782507 - 'MedNote'
-2023-10-26 10:17:22,453 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(356) - Polling stopped for bot @NoteMedBot id=6645782507 - 'MedNote'
-2023-10-26 10:17:22,453 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(551) - Polling stopped
-2023-10-26 10:17:22,454 - [ERROR] - __main__ - (main.py).<module>(55) - Bot stopped!
+2023-11-03 17:37:04,229 - [INFO] - apscheduler.scheduler - (base.py).start(181) - Scheduler started
+2023-11-03 17:37:04,392 - [INFO] - __main__ - (main.py).on_startup(43) - Запуск бота...
+2023-11-03 17:37:04,393 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(524) - Start polling
+2023-11-03 17:37:04,439 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(340) - Run polling for bot @NoteMedBot id=6645782507 - 'MedNote'
+2023-11-03 17:37:48,814 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(551) - Polling stopped
+2023-11-03 17:37:48,814 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(356) - Polling stopped for bot @NoteMedBot id=6645782507 - 'MedNote'
+2023-11-03 17:37:48,815 - [INFO] - __main__ - (main.py).main(95) - Выключение бота...
+2023-11-03 17:37:48,816 - [INFO] - __main__ - (main.py).<module>(102) - Бот выключен.
