@@ -107,7 +107,7 @@ async def doctor_close_appt(callback: types.CallbackQuery, state: FSMContext):
 
     await update_appointments()
     await callback.message.delete()
-    await callback.answer('Успешно')
+    # await callback.answer('Успешно')
 
 
 @router.callback_query(F.data.startswith("cb_doctor_open_appt_exec"))
@@ -147,6 +147,6 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
                               int(user_data['month']), int(user_data['year']),
                               int(user_data['day']), value, callback)
 
-    await callback.message.delete()
-    await callback.answer('Успешно')
     await update_appointments()
+    await callback.message.delete()
+    # await callback.answer('Успешно')
