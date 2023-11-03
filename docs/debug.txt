@@ -1,0 +1,1 @@
+journalctl -u mednotebot.service --since "1 days ago"

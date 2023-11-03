@@ -15,20 +15,25 @@ from handlers import docotor_menu
 from handlers import administrator_menu
 from handlers import services
 
-from config_reader import config
+from config_reader import config, DEBUG
 from libs.load_vars import loadvars
-from middleware.multiplefilemiddleware import MultipleFileMiddleware
+# from middleware.multiplefilemiddleware import MultipleFileMiddleware
 
 # from schedulers.jobs import send_message_time
 
 
 # logging.basicConfig(level=logging.INFO)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
-    # filename="log/mednotebot.log",
-    # filemode="w"
-)
+if DEBUG == 0:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
+        filename="log/mednotebot.log",
+        filemode="w")
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
+    )
 logger = logging.getLogger(__name__)
 
 

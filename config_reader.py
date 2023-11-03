@@ -40,4 +40,4 @@ class Variables:
 # который можно далее импортировать из разных мест
 config = Settings()
 myvars = Variables()
-DEBUG = 1
+DEBUG = 0
