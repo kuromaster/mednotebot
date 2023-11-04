@@ -723,7 +723,7 @@ async def google_get_vars(user_data: dict, callback: types.CallbackQuery):
             title=title)
     else:
         await create_next_month_calendar_bot(
-            callback, myvars.doctors[user_data['doctor']]['spreadsheet_id'],
+            callback, user_data['spreadsheet_id'],
             service,
             year=int(user_data['year']),
             month=int(user_data['month']),

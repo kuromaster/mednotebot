@@ -60,7 +60,7 @@ async def set_surname(message: types.Message, state: FSMContext):
 async def set_lastname(message: types.Message, state: FSMContext):
     await state.update_data(lastname=message.text)
     await message.answer(
-        text="Нажмите кнопку поделиться контактом или введите ваш номер телефона.\nПример: 79161234567",
+        text="Нажмите кнопку поделиться контактом",
         reply_markup=get_reg_contact_kb())
     await state.set_state(AwaitMessages.phone_add)
 
@@ -70,20 +70,21 @@ async def set_phone(message: types.Message, state: FSMContext):
     global tid, name, surname, lastname, phonenumber
     if hasattr(message.contact, 'phone_number'):
         await state.update_data(phone=message.contact.phone_number)
+        user_data = await state.get_data()
+        tid = message.chat.id
+        name = user_data["name"]
+        surname = user_data["surname"]
+        lastname = user_data["lastname"]
+        phonenumber = user_data["phone"][1:]
+        await message.answer(
+            text=f'tid: <code>{str(tid)}</code>\nИмя: {name}\nОтчество: {surname}\nФамилия: {lastname}\nНомер тел: {phonenumber}\n',
+            # text=f'Имя: {user_data["name"]}\nОтчество: {user_data["surname"]}\nФамилия: {user_data["lastname"]}\nНомер тел: {user_data["phone"]}\n',
+            reply_markup=get_reg_approve_kb())
+        await state.clear()
     else:
-        await state.update_data(phone=message.text)
-    user_data = await state.get_data()
-    tid = message.chat.id
-    name = user_data["name"]
-    surname = user_data["surname"]
-    lastname = user_data["lastname"]
-    phonenumber = user_data["phone"]
-
-    await message.answer(
-        text=f'tid: {str(tid)}\nИмя: {name}\nОтчество: {surname}\nФамилия: {lastname}\nНомер тел: {phonenumber}\n',
-        # text=f'Имя: {user_data["name"]}\nОтчество: {user_data["surname"]}\nФамилия: {user_data["lastname"]}\nНомер тел: {user_data["phone"]}\n',
-        reply_markup=get_reg_approve_kb())
-    await state.clear()
+        # await state.update_data(phone=message.text)
+        await message.answer("Пожалуйста поделитесь контактом", reply_markup=get_reg_contact_kb())
+        await state.set_state(AwaitMessages.phone_add)
 
 
 @router.message(F.text.lower() == "подтвердить")

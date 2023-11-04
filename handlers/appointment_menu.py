@@ -173,6 +173,7 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
             day = user_data['day']
             hour = user_data['hour']
             doctor = user_data['doctor']
+            user_data['spreadsheet_id'] = myvars.doctors[doctor]['spreadsheet_id']
             # print(user_data)
             car_plate = None
             if 'car_plate' in user_data:
@@ -217,15 +218,16 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
             value = None
             if appt_format == 'online':
                 query = f"INSERT INTO tb_appointments (tid, doctor_id, appt_format, appt_date, notify_date) VALUES ({tid}, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}')"
-                value = f'ФИО: {customer_fio[0]}\nФормат: {appt_format}'
+                value = f'{customer_fio[0]}\nФормат: {appt_format}'
             else:
                 query = f"INSERT INTO tb_appointments (tid, doctor_id, appt_format, description, appt_date, notify_date) VALUES ({tid}, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}')"
-                value = f'ФИО: {customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
+                value = f'{customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
 
             # print(f'appt_men:222: {query}')
             pg_execute(query)
             # print(f'query: {query}')
             # print(f'month: {month}')
+            # print(f"appt_close_approve user_data: {user_data}")
             service, sheets, title = await google_get_vars(user_data, callback)
             await update_cell(myvars.doctors[doctor]['spreadsheet_id'], int(hour), int(month), int(year), int(day),
                               value, service, sheets, title)
@@ -266,8 +268,14 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
 async def appt_close(message: types.Message, state: FSMContext):
     await state.update_data(user_tid=message.from_user.id)
     await message.delete()
-    # await message.answer("Выберите врача:", reply_markup=ReplyKeyboardRemove())
-    await message.answer("Выберите запись:", reply_markup=await get_kb_appt_cancel(state))
+    query = f"SELECT count(id) FROM tb_appointments WHERE tid={message.from_user.id} and appt_date > CURRENT_TIMESTAMP"
+    count = int(pg_soc(query)[0])
+
+    if count == 0:
+        await message.answer("Записей нет")
+    else:
+        # await message.answer("Выберите врача:", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Выберите запись:", reply_markup=await get_kb_appt_cancel(state))
 
 
 async def get_user_data(callback: types.CallbackQuery, state: FSMContext):
@@ -330,6 +338,8 @@ async def appt_close_approve(callback: types.CallbackQuery, state: FSMContext):
     pg_execute(query)
 
     value = "appt_cancel"
+    # print(f"appt_close_approve user_data: {user_data}")
+
     service, sheets, title = await google_get_vars(user_data, callback)
     await update_cell(user_data['spreadsheet_id'],
                       int(user_data['hour']),

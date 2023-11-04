@@ -1,8 +1,0 @@
-2023-11-03 23:15:28,409 - [INFO] - apscheduler.scheduler - (base.py).start(181) - Scheduler started
-2023-11-03 23:15:30,861 - [INFO] - __main__ - (main.py).on_startup(43) - Запуск бота...
-2023-11-03 23:15:30,861 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(524) - Start polling
-2023-11-03 23:15:30,937 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(340) - Run polling for bot @MaezztroDebugBot id=6728003891 - 'Debug'
-2023-11-03 23:15:36,551 - [INFO] - aiogram.dispatcher - (dispatcher.py).start_polling(551) - Polling stopped
-2023-11-03 23:15:36,551 - [INFO] - aiogram.dispatcher - (dispatcher.py)._polling(356) - Polling stopped for bot @MaezztroDebugBot id=6728003891 - 'Debug'
-2023-11-03 23:15:36,551 - [INFO] - __main__ - (main.py).main(95) - Выключение бота...
-2023-11-03 23:15:36,552 - [INFO] - __main__ - (main.py).<module>(102) - Бот выключен.

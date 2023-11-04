@@ -279,7 +279,6 @@ async def get_kb_appt_cancel(state: FSMContext) -> InlineKeyboardMarkup:
         if myvars.appointments[date]['tid'] == user_data['user_tid']:
             kb.add(types.InlineKeyboardButton(text=str(date),
                                               callback_data=f"callback_appt_close_{date.year}_{date.month}_{date.day}_{date.hour}_00_00"))
-
     kb.adjust(1)
     return kb.as_markup()
 
