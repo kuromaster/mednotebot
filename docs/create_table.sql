@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS tb_customers (
 CREATE TABLE IF NOT EXISTS tb_files (
     id          SERIAL PRIMARY KEY,
     tid         INTEGER     NOT NULL,
-    filename    VARCHAR(30) NOT NULL,
+    file_id     VARCHAR(255) UNIQUE NOT NULL,
     file_type   VARCHAR(15) NOT NULL,
     created     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

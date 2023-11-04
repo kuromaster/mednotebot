@@ -151,12 +151,45 @@ async def run_calendar(
     return kb_calendar.as_markup()
 
 
-async def get_kb_doctor_selected_day():
+async def get_kb_doctor_selected_day(state: FSMContext):
+    user_data = await state.get_data()
+
     kb = InlineKeyboardBuilder()
     kb.button(text='Закрыть приём', callback_data='cb_doctor_close_appt_exec')
     kb.button(text='Открыть прием', callback_data='cb_doctor_open_appt_exec')
     kb.button(text='Назад', callback_data='cb_doctor_workday_appt')
-    kb.button(text='Главное меню', callback_data='cb_superuser_mainmenu')
+    if user_data['user_tid'] in myvars.superuser:
+        kb.button(text='Главное меню', callback_data='cb_superuser_mainmenu')
+    else:
+        kb.button(text='Главное меню', callback_data='callback_doctor_calendar:BACK:0:0:0')
+
+    kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
+
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+async def get_kb_doctor_search_user_result(state: FSMContext):
+    user_data = await state.get_data()
+    kb = InlineKeyboardBuilder()
+
+    for user in user_data['search_user'].keys():
+        text = f"[{user}] {user_data['search_user'][user]['lastname']} {user_data['search_user'][user]['name']} {user_data['search_user'][user]['surname']}"
+        kb.add(
+            types.InlineKeyboardButton(text=text, callback_data=f"cb_doctor_search_user_result_{user_data['role']}_{user}"))
+
+    kb.button(text='Назад', callback_data='callback_doctor_calendar:BACK:2023:1:1')
+    kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
+
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+async def get_kb_doctor_selected_patient() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text='Загрузить историю болезни(файлы)', callback_data='cb_doctor_get_patient_files')
+    kb.button(text='Главное меню', callback_data='callback_doctor_calendar:BACK:2023:1:1')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
 
     kb.adjust(1)

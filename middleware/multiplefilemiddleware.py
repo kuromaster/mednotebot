@@ -17,13 +17,9 @@ class MultipleFileMiddleware(BaseMiddleware):
             message: Message,
             data: dict[str, Any]
     ) -> Any:
-        # print(message.media_group_id)
-        # print(message)
-        print(data)
+
         if not message.media_group_id:
-            # await handler(message, data)
-            # message.media_group_id = 0
-            # self.album_data[message.media_group_id].append(message)
+            await handler(message, data)
             return
         try:
             self.album_data[message.media_group_id].append(message)

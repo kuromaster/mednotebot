@@ -6,26 +6,19 @@ from aiogram import types
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 
+from aiogram.types import InputMediaPhoto, InputMedia, InputMediaDocument
+
 from config_reader import myvars, DEBUG
-from keyboards.for_doctor import run_calendar, get_kb_doctor_menu, get_kb_doctor_selected_day
+from filters.permission import check_permission
+from handlers.superuser_menu import InputData
+from keyboards.for_doctor import run_calendar, get_kb_doctor_menu, get_kb_doctor_selected_day, \
+    get_kb_doctor_selected_patient
 from libs.db_lib import pg_select_one_column as pg_soc, pg_execute, pg_select
 from libs.dictanotry_lib import to_ru_dayofweek, to_ru_month3
 from libs.google_ss import update_cell, google_get_vars
 from libs.load_vars import update_appointments
+from main import logger
 
-
-if DEBUG == 0:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
-        filename="log/doctor_menu.log",
-        filemode="w")
-else:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
-    )
-logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -58,6 +51,7 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(year=year)
     await state.update_data(month=month)
     await state.update_data(day=day)
+    await state.update_data(user_tid=callback.from_user.id)
 
     # return_data = (False, None)
     temp_date = datetime(int(year), int(month), 1)
@@ -82,12 +76,12 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
             '━━━━━━━━━━━━━━━\n' + \
             f'Запись: <u>{status_apt}</u>'
         await callback.message.delete()
-        await callback.message.answer(text=text, reply_markup=await get_kb_doctor_selected_day())
+        await callback.message.answer(text=text, reply_markup=await get_kb_doctor_selected_day(state))
         await callback.answer("Успешно")
     if action == "BACK":
-        await state.clear()
         await callback.message.delete()
-        await callback.message.answer(f'Выберите врача', reply_markup=await get_kb_doctor_menu(state))
+        await callback.message.answer(f'Меню', reply_markup=await get_kb_doctor_menu(state))
+        await state.clear()
         await callback.answer('')
     if action == "IGNORE":
         await callback.answer('Выберите число')
@@ -181,3 +175,70 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
 
     except Exception as e:
         logger.error(f"exception: {e} traceback: {traceback.format_exc()}")
+
+
+@router.callback_query(F.data == "cb_doctor_patients")
+async def set_doctor(callback: types.CallbackQuery, state: FSMContext):
+    is_superuser = await check_permission(myvars.superuser, callback=callback)
+    is_doctor = await check_permission(myvars.doctors, callback=callback)
+
+    if is_superuser or is_doctor:
+        await state.update_data(role="patient")
+        await callback.message.delete()
+        await callback.message.answer("Введите фамилию или её часть для поиска:")
+        await callback.answer("")
+        await state.set_state(InputData.lastname)
+    else:
+        await callback.message.delete()
+        await callback.answer("")
+
+
+@router.callback_query(F.data.startswith("cb_doctor_search_user_result_"))
+async def manage_seleted_patient(callback: types.CallbackQuery, state: FSMContext):
+    is_superuser = await check_permission(myvars.superuser, callback=callback)
+    is_doctor = await check_permission(myvars.doctors, callback=callback)
+    if is_superuser or is_doctor:
+        role = callback.data.split("_")[5]
+        tid = int(callback.data.split("_")[6])
+        await state.update_data(selected_user=tid)
+        user_data = await state.get_data()
+
+        await callback.message.delete()
+        text = f"<b>Пациент</b>\n" \
+               f"━━━━━━━━━━━━━━━\n" \
+               f"<b>{[tid]} {user_data['search_user'][tid]['lastname']} " \
+               f"{user_data['search_user'][tid]['name']} {user_data['search_user'][tid]['surname']}</b>"
+
+        await callback.message.answer(text=text, reply_markup=await get_kb_doctor_selected_patient())
+        await callback.answer("")
+    else:
+        await callback.message.delete()
+        await callback.answer("")
+
+
+@router.callback_query(F.data == "cb_doctor_get_patient_files")
+async def set_doctor(callback: types.CallbackQuery, state: FSMContext):
+    user_data = await state.get_data()
+    tid = user_data['selected_user']
+
+    # media_group_photo = []
+    # media_group_doc = []
+    query = f"SELECT file_id, file_type FROM tb_files WHERE tid ={tid} ORDER BY created DESC"
+    print(query)
+    rows = pg_select(query)
+    for row in rows:
+        if row[1] == 'photo':
+            # media_group_photo.append(InputMediaPhoto(media=row[0]))
+            # await callback.message.answer_media_group(media_group)
+            await callback.message.answer_photo(photo=row[0])
+        elif row[1] == 'document':
+            # media_group_doc.append(InputMediaDocument(media=row[0]))
+            await callback.message.answer_document(document=row[0])
+        elif row[1] == 'audio':
+            await  callback
+
+    # await callback.message.answer_media_group(media_group_photo)
+    # await callback.message.answer_media_group(media_group_doc)
+    # await callback.message.do answer_media_group(media_group_doc)
+    await callback.message.answer("Загрузка завершена")
+    await callback.answer("Успешно")

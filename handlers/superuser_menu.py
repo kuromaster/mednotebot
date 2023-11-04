@@ -5,7 +5,7 @@ from aiogram.fsm.state import StatesGroup, State
 
 # from filters.check_user import IsSuIsRegCallback
 from keyboards.for_appointment import get_appointment_kb
-from keyboards.for_doctor import get_kb_doctor_menu
+from keyboards.for_doctor import get_kb_doctor_menu, get_kb_doctor_search_user_result
 from keyboards.for_superuser import get_kb_debug_menu, get_kb_main_menu, get_kb_superuser_manage_menu, \
     get_kb_superuser_search_user_result, get_kb_debug_test_vars, get_kb_superuser_approve_user_role, \
     get_kb_su_doctor_list, get_kb_su_approve_spreadsheet_id
@@ -156,22 +156,30 @@ async def set_superuser(callback: types.CallbackQuery, state: FSMContext):
         await callback.answer("")
 
 
+async def add_search_user_to_dict(message: types.Message, state: FSMContext):
+    lastname = message.text
+    query = f"SELECT lastname, name, surname, tid, is_doctor, is_administrator, is_superuser " \
+            f" FROM tb_customers WHERE lower(lastname) LIKE '%{lastname.lower()}%'"
+    rows = pg_select(query)
+    my_search_user = {}
+
+    for row in rows:
+        my_search_user[row[3]] = {'lastname': row[0], 'name': row[1], 'surname': row[2],
+                                  'is_doctor': row[4], 'is_administrator': row[5], 'is_superuser': row[6]}
+
+    await state.update_data(search_user=my_search_user)
+
+
 @router.message(InputData.lastname)
 async def search_user(message: types.Message, state: FSMContext):
     is_superuser = await check_permission(myvars.superuser, message)
+    is_doctor = await check_permission(myvars.doctors, message)
     if is_superuser:
-        lastname = message.text
-        query = f"SELECT lastname, name, surname, tid, is_doctor, is_administrator, is_superuser " \
-                f" FROM tb_customers WHERE lower(lastname) LIKE '%{lastname.lower()}%'"
-        rows = pg_select(query)
-        my_search_user = {}
-
-        for row in rows:
-            my_search_user[row[3]] = {'lastname': row[0], 'name': row[1], 'surname': row[2],
-                                      'is_doctor': row[4], 'is_administrator': row[5], 'is_superuser': row[6]}
-
-        await state.update_data(search_user=my_search_user)
+        await add_search_user_to_dict(message, state)
         await message.answer("Результат: ", reply_markup=await get_kb_superuser_search_user_result(state))
+    elif is_doctor:
+        await add_search_user_to_dict(message, state)
+        await message.answer("Результат: ", reply_markup=await get_kb_doctor_search_user_result(state))
     else:
         await message.delete()
 

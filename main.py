@@ -19,12 +19,9 @@ from handlers import services
 
 from config_reader import config, DEBUG
 from libs.load_vars import loadvars
-# from middleware.multiplefilemiddleware import MultipleFileMiddleware
-
-# from schedulers.jobs import send_message_time
+from middleware.multiplefilemiddleware import MultipleFileMiddleware
 
 
-# logging.basicConfig(level=logging.INFO)
 if DEBUG == 0:
     logging.basicConfig(
         level=logging.INFO,
@@ -59,7 +56,7 @@ async def main():
         dp.update.middleware.register(SchedulerMiddleware(scheduler))
 
         # Регистрация Фото/Файлы мидлваре
-        #dp.message.middleware.register(MultipleFileMiddleware())
+        dp.message.middleware.register(MultipleFileMiddleware())
 
         # Добавляем роуты в диспетчер
         dp.include_routers(cm_start.router)

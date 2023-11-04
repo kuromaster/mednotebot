@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import ReplyKeyboardRemove
 
 from keyboards.for_appointment import time_picker, get_doctor_kb, start_calendar, kb_appt_state, kb_appt_approve, \
     get_kb_appt_cancel, get_kb_appt_cancel_approve
@@ -27,6 +28,7 @@ class AppointmentCustomer(StatesGroup):
     time = State()
     appt_state = State()
     car_plate = State()
+    photo = State()
 
 
 @router.message(F.text.lower() == "записаться к врачу")
@@ -343,3 +345,10 @@ async def appt_close_approve(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("Запись отменена")
     await state.clear()
     await callback.answer("Успешно")
+
+
+@router.message(F.text.lower() == "добавить историю болезни(файлы)")
+async def appt_add_files(message: types.Message, state: FSMContext):
+    await message.delete()
+    await message.answer("Бот ожидает приём файлов", reply_markup=ReplyKeyboardRemove())
+    await state.set_state(AppointmentCustomer.photo)
