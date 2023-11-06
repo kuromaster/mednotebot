@@ -83,8 +83,8 @@ async def get_kb_su_doctor_list(state: FSMContext) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
     for doctor in user_data['doctors'].keys():
-        text = f"[{user_data['doctors'][doctor]['id']}] {doctor}"
-        kb.add(types.InlineKeyboardButton(text=text, callback_data=f"cb_su_doctor_selected_{user_data['doctors'][doctor]['id']}_{doctor}"))
+        text = f"[{user_data['doctors'][doctor]['tid']}] {doctor}"
+        kb.add(types.InlineKeyboardButton(text=text, callback_data=f"cb_su_doctor_selected_{user_data['doctors'][doctor]['tid']}_{doctor}"))
 
     kb.button(text='Назад', callback_data='cb_superuser_manage')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
@@ -99,6 +99,24 @@ async def get_kb_su_approve_spreadsheet_id():
     kb.button(text='Применить', callback_data='cb_su_approve_spreadsheet_id')
     kb.button(text='Назад', callback_data='cb_superuser_manage')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
+
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+async def get_su_doctor_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for doctor in myvars.doctors.keys():
+        kb.add(types.InlineKeyboardButton(text=doctor, callback_data=f"cb_su_selected_doctor_{doctor}"))
+
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+async def get_su_administrator_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    for admin in myvars.administrator.keys():
+        kb.add(types.InlineKeyboardButton(text=admin, callback_data=f"cb_su_selected_admin_{admin}"))
 
     kb.adjust(1)
     return kb.as_markup()

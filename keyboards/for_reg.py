@@ -17,6 +17,6 @@ def get_reg_contact_kb() -> ReplyKeyboardMarkup:
 def get_reg_approve_kb() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
     kb.button(text="Подтвердить")
-    kb.button(text="Изменить",)
+    kb.button(text="Изменить")
     kb.adjust(2)
     return kb.as_markup(resize_keyboard=True)

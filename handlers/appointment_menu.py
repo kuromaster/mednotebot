@@ -145,6 +145,15 @@ async def set_name(message: types.Message, state: FSMContext):
                          reply_markup=await kb_appt_approve())
 
 
+async def is_phonenumber(state: FSMContext):
+    user_data = await state.get_data()
+    if 'selected_user' in user_data.keys():
+        if user_data["selected_user"] == int(user_data["search_user"][user_data["selected_user"]]["phonenumber"]):
+            return True, True
+        return True, False
+    return False, False
+
+
 @router.callback_query(F.data.startswith("appt_approve"))
 async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
     user_data = await state.get_data()
@@ -176,48 +185,61 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
             else:
                 car_plate = 'online'
             appt_format = user_data['appt_state']
-
-            # print(f'tid: {callback.message.chat.id}')
-            tid = callback.message.chat.id
-            query = f"SELECT lastname, name, surname FROM tb_customers WHERE tid={tid}"
-            rows = pg_select(query)
-            # print(f'rows: {rows}')
-            # lastname = rows[0]
-            customer_fio = []
-            for row in rows:
-                # print(f'row: {row}')
-                # print(f'row[0]: {row[0]}')
-                customer_fio.append(f'{row[0]} {row[1]} {row[2]}')
-
             appt_date = datetime(year=int(year), month=int(month), day=int(day), hour=int(hour), minute=0, second=0,
                                  microsecond=0)
-            # appt_date = datetime(year=year, month=month, day=day, hour=hour, minute=0)
-
             delta_hour = int(hour) - 10
             notify_date = appt_date - timedelta(days=1, hours=delta_hour)
+            doctor_id = myvars.doctors[doctor]['tid']
 
-            # query = f"SELECT id FROM tb_customers WHERE tid={tid}"
-            # cid = pg_soc(query)[0]
-            tid = callback.message.chat.id
+            # print(f'tid: {callback.message.chat.id}')
+            is_admin_mode, is_phone = await is_phonenumber(state)
 
-            # query = f"SELECT id FROM tb_customers WHERE lastname={doctor[:-5]} and is_doctor=1"
-            doctor_id = myvars.doctors[doctor]['id']
-            # print(myvars.doctors)
-
-            # appt_date_ts = timestamp = int(round(appt_date.timestamp()))
-            # notify_date_ts = timestamp = int(round(notify_date.timestamp()))
-            # print(f'notify_date: {notify_date}')
+            query = None
             value = None
-            if appt_format == 'online':
-                query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, appt_date, notify_date) " \
-                        f"SELECT id, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}' " \
-                        f"FROM tb_customers WHERE tid = {tid}"
-                value = f'{customer_fio[0]}\nФормат: {appt_format}'
+            customer_fio = []
+
+            if not is_phone:
+                # tid = None
+                if is_admin_mode:
+                    tid = user_data['selected_user']
+                else:
+                    tid = callback.message.chat.id
+                query = f"SELECT lastname, name, surname FROM tb_customers WHERE tid={tid}"
+                rows = pg_select(query)
+
+                for row in rows:
+                    customer_fio.append(f'{row[0]} {row[1]} {row[2]}')
+
+                if appt_format == 'online':
+                    query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, appt_date, notify_date) " \
+                            f"SELECT id, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}' " \
+                            f"FROM tb_customers WHERE tid = {tid}"
+                    value = f'{customer_fio[0]}\nФормат: {appt_format}'
+                else:
+                    query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, description, appt_date, notify_date) " \
+                            f"SELECT id, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}'" \
+                            f"FROM tb_customers WHERE tid = {tid}"
+                    value = f'{customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
             else:
-                query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, description, appt_date, notify_date) " \
-                        f"SELECT id, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}'" \
-                        f"FROM tb_customers WHERE tid = {tid}"
-                value = f'{customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
+                # phonenumber = user_data[user_data['selected_user']]["phonenumber"]
+                phonenumber = user_data["selected_user"]
+
+                query = f"SELECT lastname, name, surname FROM tb_customers WHERE phonenumber='{phonenumber}'"
+                rows = pg_select(query)
+
+                for row in rows:
+                    customer_fio.append(f'{row[0]} {row[1]} {row[2]}')
+
+                if appt_format == 'online':
+                    query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, appt_date, notify_date) " \
+                            f"SELECT id, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}' " \
+                            f"FROM tb_customers WHERE phonenumber = '{phonenumber}'"
+                    value = f'{customer_fio[0]}\nФормат: {appt_format}'
+                else:
+                    query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, description, appt_date, notify_date) " \
+                            f"SELECT id, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}'" \
+                            f"FROM tb_customers WHERE phonenumber = '{phonenumber}'"
+                    value = f'{customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
 
             # print(f'appt_men:222: {query}')
             pg_execute(query)
@@ -262,13 +284,31 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
 
 @router.message(F.text.lower() == "🗒 записи")
 async def appt_close(message: types.Message, state: FSMContext):
-    await state.update_data(user_tid=message.from_user.id)
+    is_admin_mode, is_phone = await is_phonenumber(state)
+    user_data = await state.get_data()
+    query = None
+    if not is_phone:
+        tid = None
+        if is_admin_mode:
+            tid = user_data['selected_user']
+        else:
+            tid = message.from_user.id
+        await state.update_data(user_tid=tid)
+
+        query = f"SELECT count(ap.id) " \
+                f"FROM tb_appointments as ap " \
+                f"LEFT JOIN tb_customers as cu " \
+                f"ON ap.cid = cu.id " \
+                f"WHERE tid={tid} and appt_date > CURRENT_TIMESTAMP"
+    else:
+        phonenumber = user_data['selected_user']
+        query = f"SELECT count(ap.id) " \
+                f"FROM tb_appointments as ap " \
+                f"LEFT JOIN tb_customers as cu " \
+                f"ON ap.cid = cu.id " \
+                f"WHERE phonenumber='{phonenumber}' and appt_date > CURRENT_TIMESTAMP"
+
     await message.delete()
-    query = f"SELECT count(ap.id) " \
-            f"FROM tb_appointments as ap " \
-            f"LEFT JOIN tb_customers as cu " \
-            f"ON ap.cid = cu.id " \
-            f"WHERE tid={message.from_user.id} and appt_date > CURRENT_TIMESTAMP"
     count = int(pg_soc(query)[0])
 
     if count == 0:

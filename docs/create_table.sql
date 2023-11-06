@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS tb_customers (
     id               SERIAL PRIMARY KEY,
-    tid              INTEGER NOT NULL,
+    tid              INTEGER DEFAULT 0,
     age              SMALLINT NULL,
     is_doctor        SMALLINT  DEFAULT 0,
     is_notify        SMALLINT  DEFAULT 1,

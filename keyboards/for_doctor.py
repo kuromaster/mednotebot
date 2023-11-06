@@ -13,11 +13,23 @@ from libs.dictanotry_lib import to_ru_month
 
 async def get_kb_doctor_menu(state: FSMContext) -> InlineKeyboardMarkup:
     user_data = await state.get_data()
+    spreadsheet_id = None
+
+    if user_data['user_tid'] in myvars.superuser:
+        spreadsheet_id = myvars.doctors[user_data['doctor']]['spreadsheet_id']
+    else:
+        for doctor in myvars.doctors.keys():
+            if myvars.doctors[doctor]['tid'] == user_data['user_tid']:
+                spreadsheet_id = myvars.doctors[doctor]['spreadsheet_id']
 
     kb = InlineKeyboardBuilder()
+    kb.button(text='График приёма(google)', url=f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/")
     kb.button(text='Приёмные дни', callback_data='cb_doctor_workday_appt')
     kb.button(text='Пациенты', callback_data='cb_doctor_patients')
     if user_data['user_tid'] in myvars.superuser:
+        await state.update_data(role='doctor')
+        await state.update_data(selected_user=myvars.doctors[user_data['doctor']]['tid'])
+        kb.button(text='Удалить роль', callback_data='cb_su_rm_user_role')
         kb.button(text='Назад', callback_data='cb_superuser_mainmenu')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
 

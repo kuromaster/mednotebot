@@ -230,14 +230,35 @@ async def kb_appt_approve() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+async def is_phonenumber(state: FSMContext):
+    user_data = await state.get_data()
+    if 'selected_user' in user_data.keys():
+        if user_data["selected_user"] == int(user_data["search_user"][user_data["selected_user"]]["phonenumber"]):
+            return True, True
+        return True, False
+    return False, False
+
+
 async def get_kb_appt_cancel(state: FSMContext) -> InlineKeyboardMarkup:
     user_data = await state.get_data()
+    is_admin_mode, is_phone = await is_phonenumber(state)
+
     kb = InlineKeyboardBuilder()
 
     for date in myvars.appointments.keys():
-        if myvars.appointments[date]['tid'] == user_data['user_tid']:
-            kb.add(types.InlineKeyboardButton(text=str(date),
-                                              callback_data=f"callback_appt_close_{date.year}_{date.month}_{date.day}_{date.hour}_00_00"))
+        if not is_phone:
+            if is_admin_mode:
+                if myvars.appointments[date]['tid'] == user_data['selected_user']:
+                    kb.add(types.InlineKeyboardButton(text=str(date),
+                                                      callback_data=f"callback_appt_close_{date.year}_{date.month}_{date.day}_{date.hour}_00_00"))
+            else:
+                if myvars.appointments[date]['tid'] == user_data['user_tid']:
+                    kb.add(types.InlineKeyboardButton(text=str(date),
+                                                      callback_data=f"callback_appt_close_{date.year}_{date.month}_{date.day}_{date.hour}_00_00"))
+        else:
+            if myvars.appointments[date]['phonenumber'] == str(user_data['selected_user']):
+                kb.add(types.InlineKeyboardButton(text=str(date),
+                                                  callback_data=f"callback_appt_close_{date.year}_{date.month}_{date.day}_{date.hour}_00_00"))
     kb.adjust(1)
     return kb.as_markup()
 

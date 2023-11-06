@@ -4,11 +4,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
 # from filters.check_user import IsSuIsRegCallback
+from keyboards.for_administrator import get_kb_administrator_menu, get_kb_admin_search_user_result
 from keyboards.for_appointment import get_appointment_kb
 from keyboards.for_doctor import get_kb_doctor_menu, get_kb_doctor_search_user_result
 from keyboards.for_superuser import get_kb_debug_menu, get_kb_main_menu, get_kb_superuser_manage_menu, \
     get_kb_superuser_search_user_result, get_kb_debug_test_vars, get_kb_superuser_approve_user_role, \
-    get_kb_su_doctor_list, get_kb_su_approve_spreadsheet_id
+    get_kb_su_doctor_list, get_kb_su_approve_spreadsheet_id, get_su_doctor_kb, get_su_administrator_kb
 from keyboards.for_services import get_kb_services
 from libs.db_lib import pg_select, pg_execute
 from libs.google_ss import google_main, update_cell
@@ -121,7 +122,7 @@ async def menu_doctors(callback: types.CallbackQuery, state: FSMContext):
         user_data = await state.get_data()
         await callback.message.delete()
         if user_data['user_tid'] in myvars.superuser:
-            await callback.message.answer("Меню врача:", reply_markup=await get_kb_doctor_menu(state))
+            await callback.message.answer("Выберите доктора:", reply_markup=await get_su_doctor_kb())
         else:
             await callback.message.answer("Меню:", reply_markup=await get_kb_doctor_menu(state))
         await callback.answer("")
@@ -158,28 +159,47 @@ async def set_superuser(callback: types.CallbackQuery, state: FSMContext):
 
 async def add_search_user_to_dict(message: types.Message, state: FSMContext):
     lastname = message.text
-    query = f"SELECT lastname, name, surname, tid, is_doctor, is_administrator, is_superuser " \
+    query = f"SELECT lastname, name, surname, tid, is_doctor, is_administrator, is_superuser, phonenumber " \
             f" FROM tb_customers WHERE lower(lastname) LIKE '%{lastname.lower()}%'"
     rows = pg_select(query)
     my_search_user = {}
 
     for row in rows:
-        my_search_user[row[3]] = {'lastname': row[0], 'name': row[1], 'surname': row[2],
-                                  'is_doctor': row[4], 'is_administrator': row[5], 'is_superuser': row[6]}
+        if row[3] != 0:
+            my_search_user[row[3]] = {'lastname': row[0], 'name': row[1], 'surname': row[2],
+                                      'is_doctor': row[4], 'is_administrator': row[5],
+                                      'is_superuser': row[6], 'phonenumber': row[7], 'tid': row[3]}
+        else:
+            my_search_user[int(row[7])] = {'lastname': row[0], 'name': row[1], 'surname': row[2],
+                                      'is_doctor': row[4], 'is_administrator': row[5],
+                                      'is_superuser': row[6], 'phonenumber': row[7], 'tid': row[3]}
 
     await state.update_data(search_user=my_search_user)
+
+
+async def is_user_as(state: FSMContext, as_role: str):
+    user_data = await state.get_data()
+    if as_role in user_data.keys():
+        return True
+    return False
 
 
 @router.message(InputData.lastname)
 async def search_user(message: types.Message, state: FSMContext):
     is_superuser = await check_permission(myvars.superuser, message)
     is_doctor = await check_permission(myvars.doctors, message)
-    if is_superuser:
-        await add_search_user_to_dict(message, state)
+    is_administrator = await check_permission(myvars.administrator, message)
+
+    as_doctor_flag = await is_user_as(state, 'doctor')
+    as_admin_flag = await is_user_as(state, 'admin')
+    # print(f"as_doctor_flag: {as_doctor_flag}, as_admin_flag: {as_admin_flag}, ")
+    await add_search_user_to_dict(message, state)
+    if is_superuser and not as_doctor_flag and not as_admin_flag:
         await message.answer("Результат: ", reply_markup=await get_kb_superuser_search_user_result(state))
-    elif is_doctor:
-        await add_search_user_to_dict(message, state)
+    elif is_doctor or as_doctor_flag:
         await message.answer("Результат: ", reply_markup=await get_kb_doctor_search_user_result(state))
+    elif is_administrator or as_admin_flag:
+        await message.answer("Результат: ", reply_markup=await get_kb_admin_search_user_result(state))
     else:
         await message.delete()
 
@@ -324,9 +344,15 @@ async def user_role_action_set_rm(action: int, state: FSMContext):
     else:
         action = 'удалена'
         ico = "❌"
-
-    text = f"{ico} Роль <b>{user_data['role']}</b> успешно <b>{action}</b> пользователю <u>{user_data['search_user'][tid]['lastname']} " \
-           f"{user_data['search_user'][tid]['name']} {user_data['search_user'][tid]['surname']}</u>"
+    text = None
+    if 'search_user' in user_data:
+        text = f"{ico} Роль <b>{user_data['role']}</b> успешно <b>{action}</b> пользователю <u>{user_data['search_user'][tid]['lastname']} " \
+               f"{user_data['search_user'][tid]['name']} {user_data['search_user'][tid]['surname']}</u>"
+    else:
+        if user_data['role'] == 'administrator':
+            text = f"{ico} Роль <b>{user_data['role']}</b> успешно <b>{action}</b> пользователю <u>{user_data['admin']}</u>"
+        elif user_data['role'] == 'doctor':
+            text = f"{ico} Роль <b>{user_data['role']}</b> успешно <b>{action}</b> пользователю <u>{user_data['doctor']}</u>"
     return text
 
 
@@ -358,3 +384,39 @@ async def rm_user_role(callback: types.CallbackQuery, state: FSMContext):
     else:
         await callback.message.delete()
         await callback.answer("")
+
+
+@router.callback_query(F.data.startswith("cb_su_selected_doctor_"))
+async def su_pick_doctor(callback: types.CallbackQuery, state: FSMContext):
+    doctor = callback.data.split("_")[4]
+    await state.update_data(doctor=doctor)
+    await callback.message.delete()
+    await callback.message.answer(f"Меню врача [{doctor}]:", reply_markup=await get_kb_doctor_menu(state))
+    await callback.answer("Успешно")
+
+
+@router.callback_query(F.data == "cb_superuser_administrator")
+async def menu_administrator(callback: types.CallbackQuery, state: FSMContext):
+    is_superuser = await check_permission(myvars.superuser, callback=callback)
+    is_administrator = await check_permission(myvars.administrator, callback=callback)
+    if is_superuser or is_administrator:
+        user_data = await state.get_data()
+        await callback.message.delete()
+        if user_data['user_tid'] in myvars.superuser:
+            await callback.message.answer("Выберите администратора:", reply_markup=await get_su_administrator_kb())
+        else:
+            await callback.message.answer("Меню:", reply_markup=await get_kb_administrator_menu(state))
+        await callback.answer("")
+    else:
+        await callback.message.delete()
+        await callback.answer("")
+
+
+@router.callback_query(F.data.startswith("cb_su_selected_admin_"))
+async def su_pick_administrator(callback: types.CallbackQuery, state: FSMContext):
+    admin = callback.data.split("_")[4]
+    await state.update_data(admin=admin)
+    await callback.message.delete()
+    await callback.message.answer(f"Меню администратора [{admin}]:",
+                                  reply_markup=await get_kb_administrator_menu(state))
+    await callback.answer("Успешно")

@@ -26,7 +26,7 @@ async def get_user_data(callback: types.CallbackQuery, state: FSMContext):
     user_data['appt_format'] = 'closed'
     user_data['hours'] = [10, 11, 12, 13, 14, 15, 16]
     for key in myvars.doctors.keys():
-        if myvars.doctors[key]['id'] == callback.message.chat.id:
+        if myvars.doctors[key]['tid'] == callback.message.chat.id:
             user_data['doctor'] = key
     return user_data
 

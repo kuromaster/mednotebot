@@ -3,7 +3,7 @@ from config_reader import myvars
 
 
 async def update_appointments():
-    query = "SELECT appt_date, tid, doctor_id, is_approved, is_closed, notify_date " \
+    query = "SELECT appt_date, tid, doctor_id, is_approved, is_closed, notify_date, phonenumber " \
             "FROM tb_appointments as ap " \
             "LEFT JOIN tb_customers as cu " \
             "ON ap.cid = cu.id " \
@@ -13,7 +13,7 @@ async def update_appointments():
     myvars.appointments = {}
     for row in rows:
         myvars.appointments[row[0]] = {'tid': row[1], 'doctor_id': row[2], 'is_approved': row[3], 'is_closed': row[4],
-                                       'notify_date': row[5]}
+                                       'notify_date': row[5], 'phonenumber': row[6]}
 
 
 def update_superuser():
@@ -23,8 +23,11 @@ def update_superuser():
 
 
 def update_administrator():
-    query = "SELECT tid FROM tb_customers WHERE is_administrator=1"
-    myvars.administrator = pg_soc(query)
+    query = "SELECT lastname, name, surname, tid, id FROM tb_customers WHERE is_administrator=1"
+    rows = pg_select(query)
+    myvars.administrator = {}
+    for row in rows:
+        myvars.administrator[f'{row[0]} {row[1][0]}.{row[2][0]}.'] = {'tid': row[3], 'cid': f'{row[4]}'}
 
 
 def update_doctor():
@@ -32,7 +35,7 @@ def update_doctor():
     rows = pg_select(query)
     myvars.doctors = {}
     for row in rows:
-        myvars.doctors[f'{row[0]} {row[1][0]}.{row[2][0]}.'] = {'id': row[3], 'spreadsheet_id': f'{row[4]}'}
+        myvars.doctors[f'{row[0]} {row[1][0]}.{row[2][0]}.'] = {'tid': row[3], 'spreadsheet_id': f'{row[4]}'}
 
 
 def update_registred():

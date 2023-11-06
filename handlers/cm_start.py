@@ -17,6 +17,7 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
+    await state.clear()
     await state.update_data(user_tid=message.from_user.id)
 
     is_superuser = await check_permission(myvars.superuser, message)

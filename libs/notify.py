@@ -23,7 +23,7 @@ async def notify_on_appt(year: int, month: int, day: int, doctor: str, hour: int
     if DEBUG == 1:
         chat_id = config.maezztro_tid
     else:
-        chat_id = int(myvars.doctors[doctor]['id'])
+        chat_id = int(myvars.doctors[doctor]['tid'])
     await callback.message.bot.send_message(
         chat_id=chat_id,
         text=text

@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import ReplyKeyboardRemove
 
+from handlers.appointment_menu import is_phonenumber
 from keyboards.for_reg import get_reg_contact_kb, get_reg_approve_kb
 from keyboards.for_appointment import get_appointment_kb
 from keyboards.for_superuser import get_kb_main_menu
@@ -26,6 +27,7 @@ class AwaitMessages(StatesGroup):
     lastname_add = State()
     surname_add = State()
     phone_add = State()
+    approve = State()
 
 
 @router.message(F.text.lower() == "регистрация")
@@ -70,7 +72,7 @@ async def set_phone(message: types.Message, state: FSMContext):
     if hasattr(message.contact, 'phone_number'):
         await state.update_data(phone=message.contact.phone_number)
         user_data = await state.get_data()
-        tid = message.chat.id
+        tid = message.from_user.id
         name = user_data["name"]
         surname = user_data["surname"]
         lastname = user_data["lastname"]
@@ -78,19 +80,54 @@ async def set_phone(message: types.Message, state: FSMContext):
         await message.answer(
             text=f'tid: <code>{str(tid)}</code>\nИмя: {name}\nОтчество: {surname}\nФамилия: {lastname}\nНомер тел: {phonenumber}\n',
             reply_markup=get_reg_approve_kb())
-        await state.clear()
+        await state.set_state(AwaitMessages.approve)
     else:
-        await message.answer("Пожалуйста поделитесь контактом", reply_markup=get_reg_contact_kb())
-        await state.set_state(AwaitMessages.phone_add)
+        user_data = await state.get_data()
+        if "admin_reg_patient" in user_data.keys():
+            phone = message.text
+            if len(phone) == 11:
+                if phone.isnumeric():
+                    await state.update_data(phone=phone)
+                    name = user_data["name"]
+                    surname = user_data["surname"]
+                    lastname = user_data["lastname"]
+                    await message.answer(
+                        text=f'tid: <code>0</code>\n'
+                             f'Имя: {name}\n'
+                             f'Отчество: {surname}\n'
+                             f'Фамилия: {lastname}\n'
+                             f'Номер тел: {phone}\n',
+                        reply_markup=get_reg_approve_kb())
+                    await state.set_state(AwaitMessages.approve)
+                else:
+                    await message.answer("Пожалуйста введите правильно номер. Номер не должен содержать буквы.\nПример: 79161112233",
+                                         reply_markup=get_reg_contact_kb())
+                    await state.set_state(AwaitMessages.phone_add)
+            else:
+                await message.answer("Пожалуйста введите правильно номер.\nПример: 79161112233", reply_markup=get_reg_contact_kb())
+                await state.set_state(AwaitMessages.phone_add)
+        else:
+            await message.answer("Пожалуйста поделитесь контактом", reply_markup=get_reg_contact_kb())
+            await state.set_state(AwaitMessages.phone_add)
 
 
+@router.message(AwaitMessages.approve)
 @router.message(F.text.lower() == "подтвердить")
-async def reg_approve(message: types.Message):
-    query = f"INSERT INTO tb_customers (tid, name, surname, lastname, phonenumber) VALUES ('{tid}', '{name}','{surname}','{lastname}','{phonenumber}') ON CONFLICT (phonenumber) DO NOTHING"
+async def reg_approve(message: types.Message, state: FSMContext):
+    user_data = await state.get_data()
+    if "admin_reg_patient" in user_data.keys():
+        query = f"INSERT INTO tb_customers (name, surname, lastname, phonenumber) " \
+                f"VALUES ('{user_data['name']}','{user_data['surname']}','{user_data['lastname']}','{user_data['phone']}') " \
+                f"ON CONFLICT (phonenumber) DO NOTHING"
+    else:
+        query = f"INSERT INTO tb_customers (tid, name, surname, lastname, phonenumber) " \
+                f"VALUES ('{message.from_user.id}','{user_data['name']}','{user_data['surname']}','{user_data['lastname']}','{user_data['phone']}') " \
+                f"ON CONFLICT (phonenumber) DO NOTHING"
     pg_execute(query)
 
     query = "SELECT tid FROM tb_customers"
     myvars.registred_users = pg_soc(query)
+    await state.clear()
 
     await message.answer(text="Спасибо за регистрацию!", reply_markup=get_appointment_kb())
 

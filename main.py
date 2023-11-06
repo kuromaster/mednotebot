@@ -8,7 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from middleware.apschedulermiddleware import SchedulerMiddleware
 
-from handlers import cm_start, message_photo
+from handlers import cm_start, message_files
 from handlers import registration
 from handlers import appointment_menu
 from handlers import superuser_menu
@@ -57,7 +57,7 @@ async def main():
         dp.include_routers(cm_start.router)
         dp.include_routers(registration.router)
         dp.include_routers(services.router)
-        dp.include_routers(message_photo.router)
+        dp.include_routers(message_files.router)
         dp.include_routers(appointment_menu.router, superuser_menu.router, administrator_menu.router, docotor_menu.router)
 
         # On startup

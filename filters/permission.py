@@ -13,7 +13,7 @@ async def check_permission(customers: Union[list, dict], message: Message = None
         return vvar.from_user.id in customers
     else:
         for user in customers:
-            if vvar.from_user.id == customers[user]['id']:
+            if vvar.from_user.id == customers[user]['tid']:
                 return True
 
     return False
