@@ -16,7 +16,9 @@ async def get_file_id(message: Message, data_list: dict):
         # media_group.append(InputMediaPhoto(media=file_id))
         data_list["file_id"].append(file_id)
         data_list["content_type"].append("photo")
-        query = f"INSERT INTO tb_files (tid, file_id, file_type) VALUES ({message.from_user.id},'{file_id}','photo')" \
+        query = f"INSERT INTO tb_files (cid, file_id, file_type) " \
+                f"SELECT id,'{file_id}','photo' FROM tb_customers " \
+                f"WHERE tid={message.from_user.id} " \
                 "ON CONFLICT(file_id) DO NOTHING"
     else:
         obj_dict = message.model_dump()
@@ -24,8 +26,9 @@ async def get_file_id(message: Message, data_list: dict):
         # media_group.append(InputMedia(media=file_id))
         data_list["file_id"].append(file_id)
         data_list["content_type"].append(message.content_type)
-        query = f"INSERT INTO tb_files (tid, file_id, file_type) " \
-                f"VALUES ({message.from_user.id},'{file_id}','{message.content_type}')" \
+        query = f"INSERT INTO tb_files (cid, file_id, file_type) " \
+                f"SELECT id,'{file_id}','{message.content_type}' FROM tb_customers " \
+                f"WHERE tid={message.from_user.id} " \
                 "ON CONFLICT(file_id) DO NOTHING"
 
     pg_execute(query)

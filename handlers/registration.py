@@ -30,7 +30,6 @@ class AwaitMessages(StatesGroup):
 
 @router.message(F.text.lower() == "регистрация")
 async def reg_start(message: types.Message, state: FSMContext):
-    # await message.answer("Отличный выбор!", reply_markup=get_reg_fio_kb())
     if message.from_user.id in myvars.registred_users:
         if message.from_user.id in myvars.superuser:
             await message.answer("Добрый день, superuser", reply_markup=ReplyKeyboardRemove())
@@ -78,18 +77,16 @@ async def set_phone(message: types.Message, state: FSMContext):
         phonenumber = user_data["phone"][1:]
         await message.answer(
             text=f'tid: <code>{str(tid)}</code>\nИмя: {name}\nОтчество: {surname}\nФамилия: {lastname}\nНомер тел: {phonenumber}\n',
-            # text=f'Имя: {user_data["name"]}\nОтчество: {user_data["surname"]}\nФамилия: {user_data["lastname"]}\nНомер тел: {user_data["phone"]}\n',
             reply_markup=get_reg_approve_kb())
         await state.clear()
     else:
-        # await state.update_data(phone=message.text)
         await message.answer("Пожалуйста поделитесь контактом", reply_markup=get_reg_contact_kb())
         await state.set_state(AwaitMessages.phone_add)
 
 
 @router.message(F.text.lower() == "подтвердить")
 async def reg_approve(message: types.Message):
-    query = f"INSERT INTO tb_customers (tid, name, surname, lastname, phonenumber) VALUES ('{tid}', '{name}','{surname}','{lastname}','{phonenumber}') ON CONFLICT (tid) DO NOTHING"
+    query = f"INSERT INTO tb_customers (tid, name, surname, lastname, phonenumber) VALUES ('{tid}', '{name}','{surname}','{lastname}','{phonenumber}') ON CONFLICT (phonenumber) DO NOTHING"
     pg_execute(query)
 
     query = "SELECT tid FROM tb_customers"
@@ -102,7 +99,3 @@ async def reg_approve(message: types.Message):
 async def reg_edit(message: types.Message, state: FSMContext):
     await message.answer("Введите имя", reply_markup=ReplyKeyboardRemove())
     await state.set_state(AwaitMessages.name_add)
-
-# @router.callback_query(F.data == "reg_name")
-# async def reg_answer_name(callback: types.CallbackQuery):
-#     await callback.answer(text="Принято")

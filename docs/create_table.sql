@@ -1,12 +1,12 @@
 CREATE TABLE IF NOT EXISTS tb_customers (
     id               SERIAL PRIMARY KEY,
-    tid              INTEGER UNIQUE NOT NULL,
+    tid              INTEGER NOT NULL,
     age              SMALLINT NULL,
     is_doctor        SMALLINT  DEFAULT 0,
     is_notify        SMALLINT  DEFAULT 1,
     is_administrator SMALLINT  DEFAULT 0,
     is_superuser     SMALLINT  DEFAULT 0,
-    phonenumber      VARCHAR(20) NOT NULL,
+    phonenumber      VARCHAR(20) UNIQUE NOT NULL,
     car_plate        VARCHAR(20) NULL,
     lastname         VARCHAR(50) NULL,
     name             VARCHAR(50) NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS tb_customers (
 
 CREATE TABLE IF NOT EXISTS tb_files (
     id          SERIAL PRIMARY KEY,
-    tid         INTEGER     NOT NULL,
+    cid         INTEGER     NOT NULL,
     file_id     VARCHAR(255) UNIQUE NOT NULL,
     file_type   VARCHAR(15) NOT NULL,
     created     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS tb_files (
 
 CREATE TABLE IF NOT EXISTS tb_appointments (
     id              SERIAL PRIMARY KEY,
-    tid             INT NOT NULL,
+    cid             INT NOT NULL,         -- client id - id клиента в таблице tb_customers
     doctor_id       INT NOT NULL,
     appt_format     VARCHAR(15) NOT NULL, --   формат записи online, offline, closed
     description     VARCHAR(255) NULL,
@@ -38,12 +38,13 @@ CREATE TABLE IF NOT EXISTS tb_appointments (
     notify_date     TIMESTAMP NULL --     дата оповещения
 );
 
-CREATE TABLE IF NOT EXISTS tb_test (
-    id              SERIAL PRIMARY KEY,
-    appt_date       TIMESTAMP NOT NULL --     дата записи
-);
-
-ALTER TABLE tb_appointments ADD CONSTRAINT fk_tb_appointments_tid FOREIGN KEY (tid) REFERENCES tb_customers (tid) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_tid FOREIGN KEY (tid) REFERENCES tb_customers (tid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tb_appointments ADD CONSTRAINT fk_tb_appointments_cid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_tid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE tb_appointments OWNER TO dbuser;
+ALTER TABLE tb_files OWNER TO dbuser;
+ALTER TABLE tb_customers OWNER TO dbuser;
+
+DROP TABLE tb_files;
+DROP TABLE tb_appointments;
+DROP TABLE tb_customers;

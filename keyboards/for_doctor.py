@@ -20,16 +20,13 @@ async def get_kb_doctor_menu(state: FSMContext) -> InlineKeyboardMarkup:
     if user_data['user_tid'] in myvars.superuser:
         kb.button(text='Назад', callback_data='cb_superuser_mainmenu')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
-    # kb.button(text='оффлайн/в поликлинике', callback_data='appt_state_offline')
-    # kb.button(text='Назад', callback_data='appt_state_back')
-    # kb.button(text='В начало', callback_data='appt_state_pickdoctor')
+
     kb.adjust(1)
     return kb.as_markup()
 
 
 class CalendarCallbackDoctor(CallbackData, prefix="callback_doctor_calendar"):
     action: str
-    # ddate: Optional[str]
     year: int
     month: int
     day: int
@@ -137,6 +134,7 @@ async def run_calendar(
         btns_week = btns_week[:c]
 
     kb_calendar.row(*btns_week, width=5)
+
     # Last row - Buttons
     btns_pag = [
         types.InlineKeyboardButton(
@@ -161,7 +159,7 @@ async def get_kb_doctor_selected_day(state: FSMContext):
     if user_data['user_tid'] in myvars.superuser:
         kb.button(text='Главное меню', callback_data='cb_superuser_mainmenu')
     else:
-        kb.button(text='Главное меню', callback_data='callback_doctor_calendar:BACK:0:0:0')
+        kb.button(text='Главное меню', callback_data='callback_doctor_calendar:BACK:2023:1:1')
 
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
 

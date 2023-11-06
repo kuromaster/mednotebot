@@ -5,7 +5,6 @@ import logging
 import traceback
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-# from datetime import datetime, timedelta
 
 from middleware.apschedulermiddleware import SchedulerMiddleware
 
@@ -17,26 +16,22 @@ from handlers import docotor_menu
 from handlers import administrator_menu
 from handlers import services
 
-from config_reader import config, DEBUG
+from config_reader import config
 from libs.load_vars import loadvars
 from middleware.multiplefilemiddleware import MultipleFileMiddleware
 
 
-if DEBUG == 0:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
-        filename="log/mednotebot.log",
-        filemode="w")
-else:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
-    )
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - [%(levelname)s] - %(name)s - (%(filename)s).%(funcName)s(%(lineno)d) - %(message)s",
+    # filename="log/mednotebot.log",
+    # filemode="w"
+)
+
 logger = logging.getLogger(__name__)
 
 
-async def on_startup(dispatcher):
+async def on_startup():
     logger.info("Запуск бота...")
 
 
@@ -69,14 +64,6 @@ async def main():
         dp.startup.register(on_startup)
 
         # Scheduler
-        # scheduler.add_job(send_message_time, trigger='date', run_date=datetime.now()+timedelta(seconds=5), kwargs={'bot': bot})
-        # scheduler.add_job(send_message_time,
-        #                   trigger='cron',
-        #                   start_date=datetime.now(),
-        #                   hour=datetime.now().hour,
-        #                   minute=datetime.now().minute+1,
-        #                   kwargs={'bot': bot})
-        # scheduler.add_job(send_message_time, trigger='interval', seconds=10, kwargs={'bot': bot})
         scheduler.start()
 
         # Не обрабатывать сообщение в ТГ присланные пока бот не работал
@@ -96,4 +83,3 @@ if __name__ == '__main__':
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info('Бот выключен.')
-        # logger.error("Bot stopped!")

@@ -1,12 +1,9 @@
-import logging
 import traceback
 
 from aiogram import Router, F
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
-
-from aiogram.types import InputMediaPhoto, InputMedia, InputMediaDocument
 
 from config_reader import myvars, DEBUG
 from filters.permission import check_permission
@@ -53,7 +50,6 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(day=day)
     await state.update_data(user_tid=callback.from_user.id)
 
-    # return_data = (False, None)
     temp_date = datetime(int(year), int(month), 1)
     if action == 'PREV-MONTH':
         prev_date = temp_date - timedelta(days=31)
@@ -62,7 +58,6 @@ async def pick_doctor_date(callback: types.CallbackQuery, state: FSMContext):
         next_date = temp_date + timedelta(days=31)
         await callback.message.edit_reply_markup(reply_markup=await run_calendar(year=int(next_date.year), month=int(next_date.month)))
     if action == "SELECTED":
-        # myvars.picked_date = datetime(year=int(year), month=int(month), day=int(day))
         query = f"SELECT id FROM tb_appointments WHERE date(appt_date) = date('{year}-{month}-{day}') and is_closed = 1"
         res = pg_soc(query)
         # status_apt = ''
@@ -92,20 +87,22 @@ async def doctor_close_appt(callback: types.CallbackQuery, state: FSMContext):
     user_data = await get_user_data(callback, state)
 
     try:
+        user_data['spreadsheet_id'] = myvars.doctors[user_data['doctor']]['spreadsheet_id']
         service, sheets, title = await google_get_vars(user_data, callback)
 
         for hour in user_data['hours']:
             appt_date = datetime(year=int(user_data['year']), month=int(user_data['month']), day=int(user_data['day']), hour=hour)
 
             # Проверка существует ли запись на этот день и время
-            query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp)"
+            query = f"SELECT EXISTS (SELECT cid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp)"
             res = pg_soc(query)[0]
             if res:
                 query = f"UPDATE tb_appointments SET is_closed = 1 WHERE appt_date = '{appt_date}'::timestamp"
                 pg_execute(query)
             else:
-                query = f"INSERT INTO tb_appointments (is_closed, tid, doctor_id, appt_format, appt_date) " + \
-                        f"VALUES (1, {int(user_data['doctor_id'])}, {int(user_data['doctor_id'])}, '{user_data['appt_format']}', '{appt_date}')"
+                query = f"INSERT INTO tb_appointments (is_closed, cid, doctor_id, appt_format, appt_date) " + \
+                        f"SELECT 1, id, {int(user_data['doctor_id'])}, '{user_data['appt_format']}', '{appt_date}' " \
+                        f"FROM tb_customers WHERE tid = {int(user_data['doctor_id'])}"
                 pg_execute(query)
 
             await callback.answer('БД обновлена. Обновляется Google таблица', cache_time=35)
@@ -132,7 +129,7 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
     user_data = await get_user_data(callback, state)
 
     try:
-
+        user_data['spreadsheet_id'] = myvars.doctors[user_data['doctor']]['spreadsheet_id']
         service, sheets, title = await google_get_vars(user_data, callback)
 
         for hour in user_data['hours']:
@@ -140,17 +137,22 @@ async def doctor_open_appt(callback: types.CallbackQuery, state: FSMContext):
                                  hour=hour)
 
             # Проверка существует ли запись на этот день и время от пациента
-            query = f"SELECT EXISTS (SELECT tid FROM tb_appointments WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid)"
+            query = f"SELECT EXISTS (SELECT cid FROM tb_appointments " \
+                    f"WHERE appt_date = '{appt_date}'::timestamp and " \
+                    f"cid  != (SELECT id FROM tb_customers WHERE tid = doctor_id))"
+            print(query)
             res = pg_soc(query)[0]
             value = None
             if res:
                 query = "SELECT lastname, name, surname, appt_format FROM tb_customers as cu " \
-                        "LEFT JOIN tb_appointments as ap ON cu.tid = ap.tid " \
+                        "LEFT JOIN tb_appointments as ap ON cu.id = ap.cid " \
                         f"WHERE (appt_date = '{appt_date}'::timestamp)"
                 rows = pg_select(query)
                 for row in rows:
                     value = f"openedФИО: {row[0]} {row[1]} {row[2]}\n Формат: {row[3]}"
-                query = f"UPDATE tb_appointments SET is_closed = 0 WHERE appt_date = '{appt_date}'::timestamp and doctor_id != tid"
+                query = f"UPDATE tb_appointments SET is_closed = 0 " \
+                        f"WHERE appt_date = '{appt_date}'::timestamp and " \
+                        f"cid  != (SELECT id FROM tb_customers WHERE tid = doctor_id)"
                 pg_execute(query)
             else:
                 value = "opened"
@@ -223,7 +225,12 @@ async def set_doctor(callback: types.CallbackQuery, state: FSMContext):
 
     # media_group_photo = []
     # media_group_doc = []
-    query = f"SELECT file_id, file_type FROM tb_files WHERE tid ={tid} ORDER BY created DESC"
+    query = f"SELECT file_id, file_type " \
+            f"FROM tb_files as f " \
+            f"LEFT JOIN tb_customers as cu " \
+            f"ON cu.id = f.cid " \
+            f"WHERE cu.tid={tid} " \
+            f"ORDER BY created DESC"
     print(query)
     rows = pg_select(query)
     for row in rows:

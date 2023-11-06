@@ -2,7 +2,6 @@ import traceback
 from aiogram import Router, F
 from aiogram import types
 from datetime import datetime, timedelta
-# from aiogram.types.reply_keyboard_remove import ReplyKeyboardRemove
 
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -31,10 +30,9 @@ class AppointmentCustomer(StatesGroup):
     photo = State()
 
 
-@router.message(F.text.lower() == "записаться к врачу")
+@router.message(F.text.lower() == "📝 записаться к врачу")
 async def appt_start(message: types.Message):
     await message.delete()
-    # await message.answer("Выберите врача:", reply_markup=ReplyKeyboardRemove())
     await message.answer("Выберите врача:", reply_markup=get_doctor_kb())
 
 
@@ -47,14 +45,8 @@ async def pick_doctor(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer("Успешно")
 
 
-# @router.message(F.text.lower() == "отменить запись")
-# async def reg_cancel(message: types.Message):
-#     await message.answer("Календарь:", reply_markup=await start_calendar())
-
-
 @router.callback_query(F.data.startswith("callback_calendar"))
 async def pick_date(callback: types.CallbackQuery, state: FSMContext):
-    # doctor = callback.data.split("_")[3]
     action = callback.data.split(":")[1]
     year = callback.data.split(":")[2]
     month = callback.data.split(":")[3]
@@ -217,10 +209,14 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
             # print(f'notify_date: {notify_date}')
             value = None
             if appt_format == 'online':
-                query = f"INSERT INTO tb_appointments (tid, doctor_id, appt_format, appt_date, notify_date) VALUES ({tid}, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}')"
+                query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, appt_date, notify_date) " \
+                        f"SELECT id, {doctor_id}, '{appt_format}', '{appt_date}', '{notify_date}' " \
+                        f"FROM tb_customers WHERE tid = {tid}"
                 value = f'{customer_fio[0]}\nФормат: {appt_format}'
             else:
-                query = f"INSERT INTO tb_appointments (tid, doctor_id, appt_format, description, appt_date, notify_date) VALUES ({tid}, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}')"
+                query = f"INSERT INTO tb_appointments (cid, doctor_id, appt_format, description, appt_date, notify_date) " \
+                        f"SELECT id, {doctor_id}, '{appt_format}', 'Номер: {car_plate}', '{appt_date}', '{notify_date}'" \
+                        f"FROM tb_customers WHERE tid = {tid}"
                 value = f'{customer_fio[0]}\nФормат: {appt_format}\nНомер: {car_plate}'
 
             # print(f'appt_men:222: {query}')
@@ -264,11 +260,15 @@ async def appt_approve(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer('Успешно')
 
 
-@router.message(F.text.lower() == "отменить запись")
+@router.message(F.text.lower() == "🗒 записи")
 async def appt_close(message: types.Message, state: FSMContext):
     await state.update_data(user_tid=message.from_user.id)
     await message.delete()
-    query = f"SELECT count(id) FROM tb_appointments WHERE tid={message.from_user.id} and appt_date > CURRENT_TIMESTAMP"
+    query = f"SELECT count(ap.id) " \
+            f"FROM tb_appointments as ap " \
+            f"LEFT JOIN tb_customers as cu " \
+            f"ON ap.cid = cu.id " \
+            f"WHERE tid={message.from_user.id} and appt_date > CURRENT_TIMESTAMP"
     count = int(pg_soc(query)[0])
 
     if count == 0:
@@ -309,9 +309,8 @@ async def pick_doctor(callback: types.CallbackQuery, state: FSMContext):
 
     await callback.message.delete()
     text = f"<b>{to_ru_dayofweek[user_data['appt_date'].weekday()]}</b>\n" \
-           f"<b>{user_data['day']} {to_ru_month3[int(user_data['month'])]} {user_data['year']} {user_data['hour']}:00:00</b>\n" \
            "━━━━━━━━━━━━━━━\n" \
-           f"Подтвердите отмену записи."
+           f"<b>{user_data['day']} {to_ru_month3[int(user_data['month'])]} {user_data['year']} {user_data['hour']}:00:00</b>\n"
     await callback.message.answer(text=text, reply_markup=await get_kb_appt_cancel_approve())
     await callback.answer("Успешно")
 
@@ -327,37 +326,50 @@ async def appt_close_menu(callback: types.CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "cb_appt_close_approve")
 async def appt_close_approve(callback: types.CallbackQuery, state: FSMContext):
-    user_data = await state.get_data()
-    appt_date = datetime(year=int(user_data['year']),
-                         month=int(user_data['month']),
-                         day=int(user_data['day']),
-                         hour=int(user_data['hour']))
+    try:
+        user_data = await state.get_data()
+        appt_date = datetime(year=int(user_data['year']),
+                             month=int(user_data['month']),
+                             day=int(user_data['day']),
+                             hour=int(user_data['hour']))
 
-    query = f"DELETE FROM tb_appointments " \
-            f"WHERE appt_date = '{appt_date}'::timestamp and tid={user_data['user_tid']}"
-    pg_execute(query)
+        if 'phonenumber' in user_data.keys():
 
-    value = "appt_cancel"
-    # print(f"appt_close_approve user_data: {user_data}")
+            query = f"DELETE FROM tb_appointments " \
+                    f"WHERE appt_date = '{appt_date}'::timestamp and " \
+                    f"cid=(SELECT id FROM tb_customers WHERE phonenumber={user_data['phonenumber']})"
+        else:
+            query = f"DELETE FROM tb_appointments " \
+                    f"WHERE appt_date='{appt_date}'::timestamp and " \
+                    f"cid=(SELECT id FROM tb_customers WHERE tid={user_data['user_tid']})"
+        # print(query)
+        pg_execute(query)
 
-    service, sheets, title = await google_get_vars(user_data, callback)
-    await update_cell(user_data['spreadsheet_id'],
-                      int(user_data['hour']),
-                      int(user_data['month']),
-                      int(user_data['year']),
-                      int(user_data['day']),
-                      value,
-                      service, sheets, title)
+        value = "appt_cancel"
+        # print(f"appt_close_approve user_data: {user_data}")
 
-    await update_appointments()
-    await callback.message.delete()
-    # await message.answer("Выберите врача:", reply_markup=ReplyKeyboardRemove())
-    await callback.message.answer("Запись отменена")
-    await state.clear()
-    await callback.answer("Успешно")
+        service, sheets, title = await google_get_vars(user_data, callback)
+        await update_cell(user_data['spreadsheet_id'],
+                          int(user_data['hour']),
+                          int(user_data['month']),
+                          int(user_data['year']),
+                          int(user_data['day']),
+                          value,
+                          service, sheets, title)
+
+        await update_appointments()
+        await callback.message.delete()
+        # await message.answer("Выберите врача:", reply_markup=ReplyKeyboardRemove())
+        await callback.message.answer("Запись отменена")
+        await state.clear()
+        await callback.answer("Успешно")
+    except Exception as e:
+        print(f"Exception: {e}\nTraceback: {traceback.format_exc()}")
+        await callback.message.delete()
+        await callback.message.answer("Попробуйте ещё раз /start")
 
 
-@router.message(F.text.lower() == "добавить историю болезни(файлы)")
+@router.message(F.text.lower() == "➕ добавить историю болезни(файлы)")
 async def appt_add_files(message: types.Message, state: FSMContext):
     await message.delete()
     await message.answer("Бот ожидает приём файлов", reply_markup=ReplyKeyboardRemove())
