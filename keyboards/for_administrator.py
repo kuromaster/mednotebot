@@ -60,8 +60,8 @@ async def get_kb_admin_search_user_result(state: FSMContext):
 async def get_kb_admin_selected_patient() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
 
-    kb.button(text='Новая запись', callback_data='cb_admin_select_doctor')
-    kb.button(text='Записи', callback_data='cb_admin_appointments_patient')
+    kb.button(text='📝 Новая запись', callback_data='cb_admin_select_doctor')
+    kb.button(text='🗒 Записи', callback_data='cb_admin_appointments_patient')
     kb.button(text='Главное меню', callback_data='cb_superuser_administrator')
     kb.button(text='Скрыть меню', callback_data='cb_superuser_remove_menu')
 

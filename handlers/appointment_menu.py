@@ -373,15 +373,22 @@ async def appt_close_approve(callback: types.CallbackQuery, state: FSMContext):
                              day=int(user_data['day']),
                              hour=int(user_data['hour']))
 
-        if 'phonenumber' in user_data.keys():
+        is_admin_mode, is_phone = await is_phonenumber(state)
 
-            query = f"DELETE FROM tb_appointments " \
-                    f"WHERE appt_date = '{appt_date}'::timestamp and " \
-                    f"cid=(SELECT id FROM tb_customers WHERE phonenumber={user_data['phonenumber']})"
+        if not is_phone:
+            if is_admin_mode:
+                query = f"DELETE FROM tb_appointments " \
+                        f"WHERE appt_date='{appt_date}'::timestamp and " \
+                        f"cid=(SELECT id FROM tb_customers WHERE tid={user_data['selected_user']})"
+            else:
+                query = f"DELETE FROM tb_appointments " \
+                        f"WHERE appt_date='{appt_date}'::timestamp and " \
+                        f"cid=(SELECT id FROM tb_customers WHERE tid={user_data['user_tid']})"
         else:
             query = f"DELETE FROM tb_appointments " \
-                    f"WHERE appt_date='{appt_date}'::timestamp and " \
-                    f"cid=(SELECT id FROM tb_customers WHERE tid={user_data['user_tid']})"
+                    f"WHERE appt_date = '{appt_date}'::timestamp and " \
+                    f"cid=(SELECT id FROM tb_customers WHERE phonenumber='{user_data['selected_user']}')"
+
         # print(query)
         pg_execute(query)
 

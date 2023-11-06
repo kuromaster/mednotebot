@@ -202,7 +202,7 @@ async def time_picker(state: FSMContext) -> InlineKeyboardMarkup:
         flag = await check_apt_hour(int(hour), user_data['picked_date'])
 
         if not flag:
-            btns_hour.append(types.InlineKeyboardButton(text=f'{hour}.00-{hour}.40', callback_data=f'time_picker_{hour}'))
+            btns_hour.append(types.InlineKeyboardButton(text=f'🕓 {hour}.00-{hour}.40', callback_data=f'time_picker_{hour}'))
 
     kb.row(*btns_hour, width=1)
     kb.button(text='Назад', callback_data='time_picker_back')
