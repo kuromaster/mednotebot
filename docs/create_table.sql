@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS tb_appointments (
 );
 
 ALTER TABLE tb_appointments ADD CONSTRAINT fk_tb_appointments_cid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_tid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_cid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE tb_appointments OWNER TO dbuser;
 ALTER TABLE tb_files OWNER TO dbuser;
