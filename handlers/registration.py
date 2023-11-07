@@ -129,7 +129,10 @@ async def reg_approve(message: types.Message, state: FSMContext):
     myvars.registred_users = pg_soc(query)
     await state.clear()
 
-    await message.answer(text="Спасибо за регистрацию!", reply_markup=get_appointment_kb())
+    if "admin_reg_patient" in user_data.keys():
+        await message.answer(text="Пациент зарегистрирован. /start", reply_markup=ReplyKeyboardRemove())
+    else:
+        await message.answer(text="Спасибо за регистрацию!", reply_markup=get_appointment_kb())
 
 
 @router.message(F.text.lower() == "изменить")
