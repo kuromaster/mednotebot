@@ -65,7 +65,7 @@ sudo su - postgres
 createuser dbuser
 ```
 ```sh
-createuser dbuser
+createdb mednote
 ```
 ### создаём необходимые таблицы
 ```sql
