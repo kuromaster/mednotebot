@@ -55,6 +55,36 @@ ufw enable
 ufw status
 ```
 
-
+## установка бота
+### скачиваем из гита нашего бота
 ```sh
+git clone -b master https://github.com/kuromaster/mednotebot.git /opt/mednotebot
+```
+
+### создаём виртуальное окружение и активируем его
+```sh
+cd /opt/mednotebot && virtualenv venv && source /opt/mednotebot/venv/bin/activate
+```
+
+### устанавливаем пакеты из файла requirements.txt
+```sh
+pip3 install -r requirements.txt
+```
+
+### создаём недостающие каталоги
+```sh
+mkdir -p {cred,config}
+```
+
+### правим .env по пути /opt/mednotebot/config
+```conf
+BOT_TOKEN = XXXXX:XXXXXXXXX
+APP_NAME = medtest
+
+PG_USER = dbuser
+PG_PWD = XXXXX
+PG_HOST = 127.0.0.1
+PG_DBNAME = mednote
+
+MAEZZTRO_TID = XXXXX
 ```
