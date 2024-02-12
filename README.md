@@ -86,7 +86,8 @@ CREATE TABLE IF NOT EXISTS tb_customers (
     date_birth       TIMESTAMP NULL,
     date_reg         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+```
+```sql
 CREATE TABLE IF NOT EXISTS tb_files (
     id          SERIAL PRIMARY KEY,
     cid         INTEGER     NOT NULL,
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS tb_files (
     file_type   VARCHAR(15) NOT NULL,
     created     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+```
+```sql
 CREATE TABLE IF NOT EXISTS tb_appointments (
     id              SERIAL PRIMARY KEY,
     cid             INT NOT NULL,         -- client id - id клиента в таблице tb_customers
@@ -108,10 +110,14 @@ CREATE TABLE IF NOT EXISTS tb_appointments (
     approve_date    TIMESTAMP NULL, --     дата пациент подтвердил запись
     notify_date     TIMESTAMP NULL --     дата оповещения
 );
-
+```
+```sql
 ALTER TABLE tb_appointments ADD CONSTRAINT fk_tb_appointments_cid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
+```
+```sql
 ALTER TABLE tb_files ADD CONSTRAINT fk_tb_files_cid FOREIGN KEY (cid) REFERENCES tb_customers (id) ON DELETE CASCADE ON UPDATE CASCADE;
-
+```
+```sql
 ALTER TABLE tb_appointments OWNER TO dbuser;
 ALTER TABLE tb_files OWNER TO dbuser;
 ALTER TABLE tb_customers OWNER TO dbuser;
