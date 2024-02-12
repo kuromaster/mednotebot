@@ -69,6 +69,9 @@ createdb mednote
 ```
 ### создаём необходимые таблицы
 ```sql
+\c mednote
+```
+```sql
 CREATE TABLE IF NOT EXISTS tb_customers (
     id               SERIAL PRIMARY KEY,
     tid              INTEGER DEFAULT 0,
